@@ -65,15 +65,36 @@ teacher %>% filter(kind == '중학교') %>% ggplot(aes(x = temp.per.personnel.ra
 
 teacher %>% filter(kind == '고등학교', time.total != 0) %>% count(year, temp.per.personnel.rate) %>% as.data.frame()
 
+##############  교사 구성 
+long.teacher %>% filter(div %in% c('president.total', 'vicepresident.total', 'teacher.total', 'temp.total', 'time.total')) %>%
+  group_by(year, div) %>%
+  summarise(sum = sum(value)) -> composition.teacher
+
+composition.teacher$div <- factor(composition.teacher$div, levels = c('president.total', 'vicepresident.total', 'teacher.total', 'temp.total', 'time.total'), labels = c('교장', '교감', '교사', '기간제교사', '시간강사'))
+
+composition.teacher %>% 
+  ggplot(aes(x = year, y = sum, fill = div)) + geom_col(position = 'stack', stat = 'identity')
+
+composition.teacher %>% 
+  ggplot(aes(x = year)) + geom_bar()
+
 
 ##############  기간제 비율 평균
-teacher %>% group_by(year, kind) %>% summarise(mean = mean(temp.per.personnel.rate, na.rm = T)) %>%
+teacher %>% group_by(year, kind) %>% 
+  summarise(mean = mean(temp.per.personnel.rate, na.rm = T)) %>%
+  mutate(Label = ifelse(year == 2020, levels(kind), NA)) %>%
   ggplot(aes(x = year, y = mean)) + geom_line(aes(group = kind, color = kind)) + 
-  geom_point() + 
+  geom_point(aes(color = kind)) + 
   geom_text_repel(aes(label = scales::percent_format(accuracy = 0.01)(mean))) +
   scale_color_discrete(name = '학교급') +
-  labs(x = '연도', y = '정원대비 비정규교사 비율', title = '정원대비 비정규 교사 비율') +
-  scale_y_continuous(label = scales::percent_format(accuracy = 1))
+  labs(x = '연도', y = '백분율', title = '정원대비 비정규 교사 비율', subtitle = '비율 = (기간제교사+시간강사) / (교원정원) * 100') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue")) + 
+  theme(legend.position = "bottom") + theme(legend.box.background = element_rect(color = "skyblue", size = 1)) + theme(legend.title = element_blank()) +   # 범례의 타이틀을 지움
+  geom_text_repel(aes(label = Label))
+
+ggsave("정원대비비정규교사비율.jpg", dpi = 300) 
   
 
 ##############  순회학급
