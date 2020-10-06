@@ -12,7 +12,7 @@ library(RColorBrewer)
 getwd()
 
 ##################   데이터 import
-teacher <- read.csv('d:/R/data/teacher.csv', header = T, stringsAsFactors = T)
+teacher <- read.csv('c:/R/data/teacher.csv', header = T, stringsAsFactors = T)
 
 #################    데이터 확인
 summary(teacher)
@@ -29,12 +29,14 @@ teacher$scale <- factor(teacher$scale, levels = c('특별/광역시', '시', '�
 summary(teacher$scale)
 
 ###############    기간제 비율 필드 생성
-teacher <- teacher %>% mutate(temp.per.personnel.rate = (temp.total+time.total)/personnel.teacher)
+teacher <- teacher %>% mutate(temp.per.personnel.rate = (temp.total+time.total)/personnel.teacher,
+                              leave.total = leave.president.total + leave.vicepresident.total + leave.teacher.total)
+
 summary(teacher$temp.per.personnel.rate)
 
 
 ###############     긴형태로 데이터 프레임 변환
-long.teacher <- gather(teacher, div, value, 15:48)
+long.teacher <- gather(teacher, div, value, 15:49)
 summary(long.teacher)
 
 
@@ -75,7 +77,7 @@ teacher %>%
 
 ###############    전체 교원수
 teacher %>% 
-  group_by(year) %>% summarise(sum = sum(total)) %>%
+  group_by(year) %>% summarise(sum = sum(total+leave.total)) %>%
   ggplot(aes(x = year, y = sum)) +
   geom_line(aes(group = 1)) +
   geom_point() +
@@ -92,7 +94,7 @@ teacher %>%
 ###############    학교급별 교원수
 
 teacher %>% 
-  group_by(year, kind) %>% summarise(sum = sum(total)) %>%
+  group_by(year, kind) %>% summarise(sum = sum(total+leave.total)) %>%
   ggplot(aes(x = year, y = sum, group = kind, color = kind)) +
   geom_line() +
   geom_point() +
@@ -103,7 +105,8 @@ teacher %>%
   scale_color_brewer(type = 'div', palette = 'Set1') +
   scale_fill_brewer(type = 'div', palette = 'Set1') +
   theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12)) + 
+        legend.text=element_text(size=12),
+        legend.position = 'bottom') + 
   ggsave("학교급별 교원수.jpg", dpi = 300) 
 
 
@@ -111,18 +114,19 @@ teacher %>%
 ###############    학교 지역별 교원수
 
 teacher %>% 
-  group_by(year, scale) %>% summarise(sum = sum(total)) %>%
+  group_by(year, scale) %>% summarise(sum = sum(total+leave.total)) %>%
   ggplot(aes(x = year, y = sum, group = scale, color = scale)) +
   geom_line() +
   geom_point() +
-  geom_text_repel(aes(label = scales::number_format(big.mark = ',')(sum)), show.legend = FALSE) +
+  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
   labs(title = '학교지역별 교원수', x = '연도', y = '교원수', color = '학교지역') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   theme_bw() +
   scale_color_brewer(type = 'div', palette = 'Set1') +
   scale_fill_brewer(type = 'div', palette = 'Set1') +
   theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12)) + 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom') + 
   ggsave("학교지역별 교원수.jpg", dpi = 300) 
 
 
@@ -320,7 +324,9 @@ teacher %>%
         legend.position = 'bottom')+ 
   ggsave("지역별 비정규 교원수 고등.jpg", dpi = 300)
 
+teacher %>% group_by(year) %>% summarise(sum(president.total + vicepresident.total + teacher.total + leave.total) - sum(personnel.president + personnel.vicepresident + personnel.teacher))
 
+34246 - 25032
 ##############  정규, 비정규별 교사 구성 
 teacher %>% 
   group_by(year) %>% 
@@ -378,103 +384,10 @@ teacher %>%
         legend.position = 'bottom') +
   ggsave("정규 비정규 교원수 및 교원 정원.jpg", dpi = 600)
 
-
-##############  정규, 비정규별 교사 구성 (초등학교 시도별 설립별)
-teacher %>% 
-  filter(kind == '초등학교') %>%
-  group_by(year, province, estkind) %>% 
-  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total),
-            irregular.sum = sum(temp.total + time.total)) %>% 
-  mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
-         비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
-  gather(div, value, 4:7) %>%
-  filter(div %in% c('정규교사', '비정규교사')) %>% 
-  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
-  geom_col(stat = 'identity', position = 'stack') + 
-  geom_text(position = position_stack(vjust = 0.5), size = 3) +
-  scale_fill_brewer(palette = "Greens") +
-  labs(title = '지역별 설립별 정규 비정규 구성비(초등)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규교사 : 교장, 교감, 교원 비정규교사 : 기간제, 시간강사') +
-  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
-  facet_grid(province ~ estkind) +
-  theme_classic() +
-  theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12), 
-        legend.position = 'bottom')
-
-##############  정규, 비정규별 교사 구성 (중학교 시도별 설립별)
-teacher %>% 
-  filter(kind == '중학교') %>%
-  group_by(year, province, estkind) %>% 
-  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total),
-            irregular.sum = sum(temp.total + time.total)) %>% 
-  mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
-             비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
-  gather(div, value, 4:7) %>%
-  filter(div %in% c('정규교사', '비정규교사')) %>% 
-  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
-  geom_col(stat = 'identity', position = 'stack') + 
-  geom_text(position = position_stack(vjust = 0.5), size = 3) +
-  scale_fill_brewer(palette = "Greens") +
-  labs(title = '지역별 설립별 정규 비정규 구성비(중학교)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규교사 : 교장, 교감, 교원 비정규교사 : 기간제, 시간강사') +
-  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
-  facet_grid(province ~ estkind) +
-  theme_classic() +
-  theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12), 
-        legend.position = 'bottom')
-
-
-##############  정규, 비정규별 교사 구성 (고등학교 시도별 설립별)
-teacher %>% 
-  filter(kind == '고등학교') %>%
-  group_by(year, province, estkind) %>% 
-  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total),
-            irregular.sum = sum(temp.total + time.total)) %>% 
-  mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
-             비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
-  gather(div, value, 4:7) %>%
-  filter(div %in% c('정규교사', '비정규교사')) %>% 
-  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
-  geom_col(stat = 'identity', position = 'stack') + 
-  geom_text(position = position_stack(vjust = 0.5), size = 3) +
-  scale_fill_brewer(palette = "Greens") +
-  labs(title = '지역별 설립별 정규 비정규 구성비(고등학교)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규교사 : 교장, 교감, 교원 비정규교사 : 기간제, 시간강사') +
-  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
-  facet_grid(province ~ estkind) +
-  theme_classic() +
-  theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12), 
-        legend.position = 'bottom')
-
-
-##############  직위별 교사 구성(전체)
-long.teacher %>% filter(div %in% c('president.total', 'vicepresident.total', 'teacher.total', 'temp.total', 'time.total')) %>%
-  group_by(year, div) %>%
-  summarise(sum = sum(value)) %>% group_by(year) %>% mutate(year.sum = sum/sum(sum)) -> composition.teacher
-
-
-composition.teacher$div <- factor(composition.teacher$div, levels = c('president.total', 'vicepresident.total', 'teacher.total', 'temp.total', 'time.total'), labels = c('교장', '교감', '교사', '기간제교사', '시간강사'), ordered = T)
-
-composition.teacher %>% 
-  group_by(year) %>% 
-  mutate(year.sum = sum/sum(sum)) %>% 
-  ggplot(aes(x = year, y = year.sum, fill = div, label = scales::percent_format(accuracy = 0.1)(year.sum))) + 
-  geom_col(position = 'stack', stat = 'identity') + 
-  geom_text(position = position_stack(vjust = 0.5)) +
-  scale_fill_brewer(palette = "Greens") +
-  labs(title = '직위별 교사 구성비', x = '연도', y = '백분률', fill = '교원 직위') +
-  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
-  theme_classic() +
-  theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12), 
-        legend.position = 'bottom') + 
-  ggsave("직위별 교사 구성비.jpg", dpi = 300)
-
-
 ##############  정규, 비정규별 교사 구성 (세부)
 teacher %>% 
   group_by(year, kind, estkind) %>% 
-  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total),
+  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total + leave.president.total + leave.vicepresident.total + leave.teacher.total),
             irregular.sum = sum(temp.total + time.total)) %>% 
   mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
              비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
@@ -491,6 +404,99 @@ teacher %>%
   theme(plot.title=element_text(size=20, color="blue"), 
         legend.position = 'bottom') + 
   ggsave("설립별 학교급별 정규 비정규 교사 구성비.jpg", dpi = 300) 
+
+
+##############  정규, 비정규별 교사 구성 (초등학교 시도별 설립별)
+teacher %>% 
+  filter(kind == '초등학교') %>%
+  group_by(year, province, estkind) %>% 
+  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total+ leave.president.total + leave.vicepresident.total + leave.teacher.total),
+            irregular.sum = sum(temp.total + time.total)) %>% 
+  mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
+         비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
+  gather(div, value, 4:7) %>%
+  filter(div %in% c('정규교사', '비정규교사')) %>% 
+  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
+  geom_col(stat = 'identity', position = 'stack') + 
+  geom_text(position = position_stack(vjust = 0.5), size = 3) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '지역별 설립별 정규 비정규 구성비(초등)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규교사 : 교장, 교감, 교원, 휴직교원 비정규교사 : 기간제, 시간강사') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  facet_grid(province ~ estkind) +
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom')
+
+##############  정규, 비정규별 교사 구성 (중학교 시도별 설립별)
+teacher %>% 
+  filter(kind == '중학교') %>%
+  group_by(year, province, estkind) %>% 
+  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total + leave.president.total + leave.vicepresident.total + leave.teacher.total),
+            irregular.sum = sum(temp.total + time.total)) %>% 
+  mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
+             비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
+  gather(div, value, 4:7) %>%
+  filter(div %in% c('정규교사', '비정규교사')) %>% 
+  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
+  geom_col(stat = 'identity', position = 'stack') + 
+  geom_text(position = position_stack(vjust = 0.5), size = 3) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '지역별 설립별 정규 비정규 구성비(중학교)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규교사 : 교장, 교감, 교원, 휴직교원 비정규교사 : 기간제, 시간강사') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  facet_grid(province ~ estkind) +
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom')
+
+
+##############  정규, 비정규별 교사 구성 (고등학교 시도별 설립별)
+teacher %>% 
+  filter(kind == '고등학교') %>%
+  group_by(year, province, estkind) %>% 
+  summarise(regular.sum = sum(president.total + vicepresident.total + teacher.total + leave.president.total + leave.vicepresident.total + leave.teacher.total),
+            irregular.sum = sum(temp.total + time.total)) %>% 
+  mutate(정규교사 = regular.sum / (regular.sum + irregular.sum), 
+             비정규교사 = irregular.sum /(regular.sum + irregular.sum)) %>%
+  gather(div, value, 4:7) %>%
+  filter(div %in% c('정규교사', '비정규교사')) %>% 
+  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
+  geom_col(stat = 'identity', position = 'stack') + 
+  geom_text(position = position_stack(vjust = 0.5), size = 3) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '지역별 설립별 정규 비정규 구성비(고등학교)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규교사 : 교장, 교감, 교원, 휴직교원 비정규교사 : 기간제, 시간강사') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  facet_grid(province ~ estkind) +
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom')
+
+
+##############  직위별 교사 구성(전체)
+long.teacher %>% filter(div %in% c('president.total', 'vicepresident.total', 'teacher.total', 'temp.total', 'time.total', 'leave.total')) %>%
+  group_by(year, div) %>%
+  summarise(sum = sum(value)) %>% group_by(year) %>% mutate(year.sum = sum/sum(sum)) -> composition.teacher
+
+
+composition.teacher$div <- factor(composition.teacher$div, levels = c('president.total', 'vicepresident.total', 'teacher.total', 'temp.total', 'time.total', 'leave.total'), labels = c('교장', '교감', '교사', '기간제교사', '시간강사', '휴직교원'), ordered = T)
+
+composition.teacher %>% 
+  group_by(year) %>% 
+  mutate(year.sum = sum/sum(sum)) %>% 
+  ggplot(aes(x = year, y = year.sum, fill = div, label = scales::percent_format(accuracy = 0.1)(year.sum))) + 
+  geom_col(position = 'stack', stat = 'identity') + 
+  geom_text(position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '직위별 교사 구성비', x = '연도', y = '백분률', fill = '교원 직위') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom') + 
+  ggsave("직위별 교사 구성비.jpg", dpi = 300)
+
 
 
 
