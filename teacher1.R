@@ -102,7 +102,7 @@ data %>%
   ggplot(aes(x = year, y = sum, group = kind, color = kind)) +
   geom_line() +
   geom_point() +
-#  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
+  #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
   labs(title = '학교급별 직원수', x = '연도', y = '직원수', color = '학교급') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   facet_wrap(~province) + 
@@ -159,7 +159,7 @@ data %>% filter(staff >= 30, staff <= 40) %>%
 data %>% 
   ggplot(aes(x = year, y = teacher.per.staff)) +
   geom_violin() +
-#  geom_jitter(alpha = 0.1) +
+  #  geom_jitter(alpha = 0.1) +
   #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
   stat_summary(geom = 'point', fun = 'median', aes(color = 'blue'), show.legend = F) +
   stat_summary(geom = 'text', fun = 'median', colour='blue', 
@@ -173,7 +173,7 @@ data %>%
                vjust=1, aes( label=paste0('최소값 = ', round(..y.., digits=1)))) +
   labs(title = '연도별 학교당 직원1인당 교원수 분포', x = '연도', y = '직원수', color = '통계값') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
-#  facet_wrap(~province) + 
+  #  facet_wrap(~province) + 
   theme_bw() +
   theme(plot.title=element_text(size=20, color="blue"),  
         legend.text=element_text(size=12)) + 
