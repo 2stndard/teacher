@@ -166,7 +166,7 @@ data %>%
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
 #  facet_wrap(~province) + 
   theme_bw() +
-  theme(plot.title=element_text(size=20, color="blue"), 
+  theme(plot.title=element_text(size=20, color="blue"),  
         legend.text=element_text(size=12)) + 
   ggsave("학교급별 직원수.jpg", dpi = 300) 
 
