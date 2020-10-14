@@ -11,7 +11,7 @@ library(RColorBrewer)
 
 
 ##################   데이터 import
-data <- read.csv('d:/R/data/general analysis1.csv', header = T, stringsAsFactors = T)
+data <- read.csv('c:/R/data/general analysis1.csv', header = T, stringsAsFactors = T)
 
 
 #################    데이터 확인
@@ -37,12 +37,30 @@ table(data$estkind)
 data$scale <- factor(data$scale, levels = c('특별/광역시', '중소도시', '읍지역', '면지역', '도서벽지'), ordered = T)
 table(data$scale)
 
+data <- data %>% filter(kind %in% c('유치원', '초등학교', '중학교', '고등학교', '특수학교')) 
+
 
 ###############    교사대비 직원 비율 필드 생성
 data <- data %>% mutate(teacher.per.staff = teacher/staff)
 summary(data$teacher.per.staff)
 data[, c('teacher', 'staff', 'teacher.per.staff')]
 
+###############    전체 교원수 및 직원수
+data %>% 
+  group_by(year) %>% summarise(sum.teacher = sum(teacher, na.rm = T), 
+                               sum.staff = sum(staff, na.rm = T)) %>%
+  ggplot(aes(x = year)) +
+  geom_line(aes(y = sum.teacher, group = 1)) + 
+  geom_point(aes(y = sum.teacher)) +  
+  geom_text_repel(aes(y = sum.teacher, label = scales::number_format(big.mark = ',')(sum.teacher)), show.legend = FALSE) +
+  geom_line(aes(y = sum.staff, group = 1)) + 
+  geom_point(aes(y = sum.staff)) +  
+  geom_text_repel(aes(y = sum.staff, label = scales::number_format(big.mark = ',')(sum.staff)), show.legend = FALSE) + 
+  theme_bw() +
+  scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
+  labs(title = '전체 교원수 및 직원수', x = '연도', y = '교원수 및 직원수') +
+  theme(plot.title=element_text(size=20, color="blue"))
+  
 
 ###############    전체 교원수
 data %>% 
@@ -98,12 +116,14 @@ data %>%
 ###############    지역별 직원수
 
 data %>% 
-  group_by(year, province, kind) %>% summarise(sum = sum(staff, na.rm = T)) %>% filter(sum != 0) %>%
+  group_by(year, province, kind) %>% summarise(sum = sum(staff, na.rm = T)) %>% 
+  filter(sum != 0) %>%
+  filter(kind %in% c('유치원', '초등학교', '중학교', '고등학교', '특수학교')) %>%
   ggplot(aes(x = year, y = sum, group = kind, color = kind)) +
   geom_line() +
   geom_point() +
   #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
-  labs(title = '학교급별 직원수', x = '연도', y = '직원수', color = '학교급') +
+  labs(title = '지역급별 직원수', x = NULL, y = '직원수', color = '학교급') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   facet_wrap(~province) + 
   theme_bw() +
@@ -111,9 +131,9 @@ data %>%
   scale_fill_brewer(type = 'div', palette = 'Set1') +
   theme(plot.title=element_text(size=20, color="blue"), 
         legend.text=element_text(size=12)) + 
-  ggsave("학교급별 직원수.jpg", dpi = 300) 
+  ggsave("지역급별 직원수.jpg", dpi = 300) 
 
-###############    직원 1인당 교원수
+###############    학교당 평균 직원수
 
 data %>% 
   group_by(year) %>% summarise(mean = mean(staff, na.rm = T)) %>% filter(mean != 0) %>%
@@ -121,13 +141,14 @@ data %>%
   geom_line() +
   geom_point() +
   geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 0.1)(mean)), show.legend = FALSE) +
-  labs(title = '직원 1인당 교원수', x = '연도', y = '교원수') +
+  labs(title = '학교당 평균 직원수', x = '연도', y = '직원수') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   theme_bw() +
   scale_color_brewer(type = 'div', palette = 'Set1') +
   scale_fill_brewer(type = 'div', palette = 'Set1') +
   theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12))
+        legend.text=element_text(size=12)) + 
+  ggsave("학교당 평균 직원수.jpg", dpi = 300) 
 
 data %>% 
   group_by(year, kind) %>% summarise(mean = mean(staff, na.rm = T)) %>% filter(mean != 0, kind %in% c('유치원', '초등학교', '중학교', '고등학교')) %>% 
@@ -135,13 +156,50 @@ data %>%
   geom_line() +
   geom_point() +
   geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 0.1)(mean)), show.legend = FALSE) +
-  labs(title = '직원 1인당 교원수', x = '연도', y = '교원수', color = '학교급') +
+  labs(title = '학교당 평균 직원수', x = '연도', y = '직원수', color = '학교급') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   theme_bw() +
   scale_color_brewer(type = 'div', palette = 'Set1') +
   scale_fill_brewer(type = 'div', palette = 'Set1') +
   theme(plot.title=element_text(size=20, color="blue"), 
-        legend.text=element_text(size=12))
+        legend.text=element_text(size=12)) + 
+  ggsave("학교당 평균 직원수(학교급별).jpg", dpi = 300) 
+
+
+###############    직원 1인당 교원수
+
+data %>% filter(round(teacher.per.staff, 1) != Inf) %>%
+  group_by(year) %>% summarise(mean = mean(round(teacher.per.staff, 1), na.rm = T)) %>%
+  ggplot(aes(x = year, y = mean, group = 1)) +
+  geom_line() +
+  geom_point() +
+  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 0.001)(mean)), show.legend = FALSE) +
+  labs(title = '직원 1인당 교원수', subtitle = '직원 1인당 교원수 = 교원 / 교직원', x = '연도', y = '교원수') +
+  scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
+  theme_bw() +
+  scale_color_brewer(type = 'div', palette = 'Set1') +
+  scale_fill_brewer(type = 'div', palette = 'Set1') +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12)) + 
+  ggsave("직원 1인당 교원수.jpg", dpi = 300) 
+
+
+###############    직원 1인당 교원수(학교급별)
+
+data %>% filter(round(teacher.per.staff, 1) != Inf) %>%
+  group_by(year, kind) %>% summarise(mean = mean(round(teacher.per.staff, 1), na.rm = T)) %>%
+  ggplot(aes(x = year, y = mean, group = kind, color = kind)) +
+  geom_line() +
+  geom_point() +
+  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 0.001)(mean)), show.legend = FALSE) +
+  labs(title = '직원 1인당 교원수', subtitle = '직원 1인당 교원수 = 교원 / 교직원', x = '연도', y = '교원수', color = '학교급') +
+  scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
+  theme_bw() +
+  scale_color_brewer(type = 'div', palette = 'Set1') +
+  scale_fill_brewer(type = 'div', palette = 'Set1') +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12)) + 
+  ggsave("직원 1인당 교원수(학교급별).jpg", dpi = 300) 
 
 ###############    학교별 직원 1인당 교원수 분포
 data %>% filter(staff < 30) %>%
@@ -156,22 +214,22 @@ data %>% filter(staff >= 30, staff <= 40) %>%
 
 ###############    학교별 직원 1인당 교원수 
 
-data %>% 
+data %>% filter(round(teacher.per.staff, 1) != Inf) %>%
   ggplot(aes(x = year, y = teacher.per.staff)) +
   geom_violin() +
   #  geom_jitter(alpha = 0.1) +
   #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
-  stat_summary(geom = 'point', fun = 'median', aes(color = 'blue'), show.legend = F) +
+  stat_summary(geom = 'point', fun = 'median', color = 'blue', show.legend = F) +
   stat_summary(geom = 'text', fun = 'median', colour='blue', 
-               vjust=-1, aes( label=paste0('중간값', round(..y.., digits=1)))) +
-  stat_summary(geom = 'point', fun = 'mean', aes(color = 'red'), show.legend = F) +
+               vjust=1, aes( label=paste0('중간값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'point', fun = 'mean', color = 'red', show.legend = F) +
   stat_summary(geom = 'text', fun = 'mean', colour='red', 
-               vjust=1, aes( label=paste0('평균값', round(..y.., digits=1)))) +
+               vjust=-0.5, aes( label=paste0('평균값 = ', round(..y.., digits=1)))) +
   stat_summary(geom = 'text', fun = 'max', colour='black', 
                vjust=1, aes( label=paste0('최대값 = ', round(..y.., digits=1)))) +
   stat_summary(geom = 'text', fun = 'min', colour='black', 
                vjust=1, aes( label=paste0('최소값 = ', round(..y.., digits=1)))) +
-  labs(title = '연도별 학교당 직원1인당 교원수 분포', x = '연도', y = '직원수', color = '통계값') +
+  labs(title = '직원대비 교원 비율별 학교 분포', subtitle = '직원 교원 비율 = 교원 / 교직원', x = '연도', y = '비율') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   #  facet_wrap(~province) + 
   theme_bw() +
@@ -180,26 +238,104 @@ data %>%
   ggsave("학교급별 직원수.jpg", dpi = 300) 
 
 
-###############    학교별 직원 1인당 교원수 
+###############    직원대비 교원 비율별 학교 분포
 
-data %>% filter(kind %in% c('유치원', '초등학교', '중학교', '고등학교')) %>%
+data %>% 
   ggplot(aes(x = year, y = teacher.per.staff)) +
-  geom_boxplot() +
+  geom_violin() +
   #  geom_jitter(alpha = 0.1) +
   #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
-  stat_summary(geom = 'point', fun = 'median', aes(color = 'blue'), show.legend = F) +
+  stat_summary(geom = 'point', fun = 'median', color = 'blue', show.legend = F) +
   stat_summary(geom = 'text', fun = 'median', colour='blue', 
-               vjust=-1, aes( label=paste0('중간값', round(..y.., digits=1)))) +
-  stat_summary(geom = 'point', fun = 'mean', aes(color = 'red'), show.legend = F) +
+               vjust=1, aes( label=paste0('중간값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'point', fun = 'mean', color = 'red', show.legend = F) +
   stat_summary(geom = 'text', fun = 'mean', colour='red', 
-               vjust=1, aes( label=paste0('평균값', round(..y.., digits=1)))) +
+               vjust=-0.5, aes( label=paste0('평균값 = ', round(..y.., digits=1)))) +
   stat_summary(geom = 'text', fun = 'max', colour='black', 
                vjust=1, aes( label=paste0('최대값 = ', round(..y.., digits=1)))) +
   stat_summary(geom = 'text', fun = 'min', colour='black', 
                vjust=1, aes( label=paste0('최소값 = ', round(..y.., digits=1)))) +
-  labs(title = '연도별 학교당 직원1인당 교원수 분포', x = '연도', y = '직원수', color = '통계값') +
+  labs(title = '직원대비 교원 비율별 학교 분포', subtitle = '직원 교원 비율 = 교원 / 교직원', x = '연도', y = '비율') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   facet_wrap(~kind) + 
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12)) + 
+  ggsave("학교급별 직원수.jpg", dpi = 300) 
+
+
+
+###############    직원대비 교원 비율별 학교 분포
+
+data %>% 
+  ggplot(aes(x = year, y = teacher.per.staff)) +
+  geom_violin() +
+  #  geom_jitter(alpha = 0.1) +
+  #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
+  stat_summary(geom = 'point', fun = 'median', color = 'blue', show.legend = F) +
+  stat_summary(geom = 'text', fun = 'median', colour='blue', 
+               vjust=1, aes( label=paste0('중간값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'point', fun = 'mean', color = 'red', show.legend = F) +
+  stat_summary(geom = 'text', fun = 'mean', colour='red', 
+               vjust=-0.5, aes( label=paste0('평균값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'text', fun = 'max', colour='black', 
+               vjust=1, aes( label=paste0('최대값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'text', fun = 'min', colour='black', 
+               vjust=1, aes( label=paste0('최소값 = ', round(..y.., digits=1)))) +
+  labs(title = '직원대비 교원 비율별 학교 분포', subtitle = '직원 교원 비율 = 교원 / 교직원', x = '연도', y = '비율') +
+  scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
+  facet_wrap(~estkind) + 
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12)) + 
+  ggsave("학교급별 직원수.jpg", dpi = 300) 
+
+###############    직원대비 교원 비율별 학교 분포
+
+data %>% 
+  ggplot(aes(x = year, y = teacher.per.staff)) +
+  geom_violin() +
+  #  geom_jitter(alpha = 0.1) +
+  #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
+  stat_summary(geom = 'point', fun = 'median', color = 'blue', show.legend = F) +
+#  stat_summary(geom = 'text', fun = 'median', colour='blue', 
+#               vjust=1, aes( label=paste0('중간값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'point', fun = 'mean', color = 'red', show.legend = F) +
+#  stat_summary(geom = 'text', fun = 'mean', colour='red', 
+#               vjust=-0.5, aes( label=paste0('평균값 = ', round(..y.., digits=1)))) +
+#  stat_summary(geom = 'text', fun = 'max', colour='black', 
+#               vjust=1, aes( label=paste0('최대값 = ', round(..y.., digits=1)))) +
+#  stat_summary(geom = 'text', fun = 'min', colour='black', 
+#               vjust=1, aes( label=paste0('최소값 = ', round(..y.., digits=1)))) +
+  labs(title = '직원대비 교원 비율별 학교 분포', subtitle = '직원 교원 비율 = 교원 / 교직원', x = '연도', y = '비율') +
+  scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
+  facet_grid(estkind~kind) + 
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12)) + 
+  ggsave("학교급별 직원수.jpg", dpi = 300) 
+
+
+###############    직원대비 교원 비율별 학교 분포
+
+data %>% filter(kind %in% c('유치원', '초등학교', '중학교', '고등학교')) %>% 
+  ggplot(aes(x = year, y = teacher.per.staff)) +
+  geom_violin() +
+  #  geom_jitter(alpha = 0.1) +
+  #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
+  stat_summary(geom = 'point', fun = 'median', color = 'blue', show.legend = F) +
+  stat_summary(geom = 'text', fun = 'median', colour='blue', 
+               vjust=1, aes( label=paste0('중간값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'point', fun = 'mean', color = 'red', show.legend = F) +
+  stat_summary(geom = 'text', fun = 'mean', colour='red', 
+               vjust=-0.5, aes( label=paste0('평균값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'text', fun = 'max', colour='black', 
+               vjust=1, aes( label=paste0('최대값 = ', round(..y.., digits=1)))) +
+  stat_summary(geom = 'text', fun = 'min', colour='black', 
+               vjust=1, aes( label=paste0('최소값 = ', round(..y.., digits=1)))) +
+  labs(title = '직원대비 교원 비율별 학교 분포', subtitle = '직원 교원 비율 = 교원 / 교직원', x = '연도', y = '비율') +
+  scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
+  facet_grid(scale~kind) + 
   theme_bw() +
   theme(plot.title=element_text(size=20, color="blue"), 
         legend.text=element_text(size=12)) + 
