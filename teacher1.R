@@ -130,12 +130,12 @@ data %>%
         legend.text=element_text(size=12))
 
 data %>% 
-  group_by(year, kind) %>% summarise(mean = mean(staff, na.rm = T)) %>% filter(mean != 0) %>%
+  group_by(year, kind) %>% summarise(mean = mean(staff, na.rm = T)) %>% filter(mean != 0, kind %in% c('유치원', '초등학교', '중학교', '고등학교')) %>% 
   ggplot(aes(x = year, y = mean, group = kind, color = kind)) +
   geom_line() +
   geom_point() +
   geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 0.1)(mean)), show.legend = FALSE) +
-  labs(title = '직원 1인당 교원수', x = '연도', y = '교원수') +
+  labs(title = '직원 1인당 교원수', x = '연도', y = '교원수', color = '학교급') +
   scale_y_continuous(label = scales::number_format(big.mark = ',')) + 
   theme_bw() +
   scale_color_brewer(type = 'div', palette = 'Set1') +
@@ -143,13 +143,22 @@ data %>%
   theme(plot.title=element_text(size=20, color="blue"), 
         legend.text=element_text(size=12))
 
+###############    학교별 직원 1인당 교원수 분포
+data %>% filter(staff < 30) %>%
+  ggplot(aes(x = staff, y = teacher)) +
+  geom_jitter() + 
+  geom_smooth(aes(color = kind), method = 'lm')
 
+data %>% filter(staff >= 30, staff <= 40) %>%
+  ggplot(aes(x = staff, y = teacher)) +
+  geom_jitter() + 
+  geom_smooth(aes(color = kind), method = 'lm')
 
 ###############    학교별 직원 1인당 교원수 
 
 data %>% 
   ggplot(aes(x = year, y = teacher.per.staff)) +
-  geom_boxplot() +
+  geom_violin() +
 #  geom_jitter(alpha = 0.1) +
   #  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(sum)), show.legend = FALSE) +
   stat_summary(geom = 'point', fun = 'median', aes(color = 'blue'), show.legend = F) +
