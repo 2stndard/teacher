@@ -423,3 +423,152 @@ data %>% filter(kind %in% c('유치원', '초등학교', '중학교', '고등학
   theme(plot.title=element_text(size=20, color="blue"), 
         legend.text=element_text(size=12)) + 
   ggsave("학교급별 직원수.jpg", dpi = 300) 
+
+glimpse(data)
+
+
+###############    정규직원 대비 비정규직원
+data %>% 
+  group_by(year) %>% 
+  filter(!(estkind == '사립' && kind == '유치원')) %>%
+  summarise(regular.sum = sum(staff.regular),
+            irregular.sum = sum(staff.temporal)) %>% 
+  mutate(정규직원 = regular.sum / (regular.sum + irregular.sum), 
+         비정규직원 = irregular.sum /(regular.sum + irregular.sum)) %>%
+  gather(div, value, 2:5) %>%
+  filter(div %in% c('정규직원', '비정규직원')) %>% 
+  ggplot(aes(x = year, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
+  geom_col(stat = 'identity', position = 'stack') + 
+  geom_text(position = position_stack(vjust = 0.5), size = 3) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '정규 비정규 직원 구성비', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규직원 : 정규직/(사립유)일반직 비정규직원 : 공무직·무기계약직/(사립유)기타직') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+#  facet_grid(province ~ estkind) +
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom') + 
+  ggsave("정규 비정규 구성비.jpg", dpi = 300) 
+
+
+###############    정규직원 대비 비정규직원(시도별)
+data %>%
+  filter(year == '2020') %>%
+  filter(!(estkind == '사립' && kind == '유치원')) %>%
+  group_by(province) %>% 
+  summarise(regular.sum = sum(staff.regular),
+            irregular.sum = sum(staff.temporal)) %>% 
+  mutate(정규직원 = regular.sum / (regular.sum + irregular.sum), 
+             비정규직원 = irregular.sum /(regular.sum + irregular.sum)) %>%
+  gather(div, value, 2:5) %>%
+  filter(div %in% c('정규직원', '비정규직원')) %>% 
+  ggplot(aes(x = province, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
+  geom_col(stat = 'identity', position = 'stack') + 
+  geom_text(position = position_stack(vjust = 0.5), size = 3) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '정규 비정규 직원 구성비(20)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규직원 : 정규직 비정규직원 : 공무직·무기계약직') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  #  facet_grid(province ~ estkind) +
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom') + 
+  geom_hline(yintercept = 0.268, color = 'red') +
+  ggsave("정규 비정규 구성비(시도별).jpg", dpi = 300) 
+
+###############    정규직원 대비 비정규직원(시도별)
+data %>%
+  filter(year == '2020') %>%
+  filter(!(estkind == '사립' && kind == '유치원')) %>%
+  group_by(province, kind) %>% 
+  summarise(regular.sum = sum(staff.regular),
+            irregular.sum = sum(staff.temporal)) %>% 
+  mutate(정규직원 = regular.sum / (regular.sum + irregular.sum), 
+             비정규직원 = irregular.sum /(regular.sum + irregular.sum)) %>%
+  gather(div, value, 3:6) %>%
+  filter(div %in% c('정규직원', '비정규직원')) %>% 
+  ggplot(aes(x = province, y = value, fill = div, label = scales::percent_format(accuracy = 0.1)(value))) + 
+  geom_col(stat = 'identity', position = 'stack') + 
+#  geom_text(position = position_stack(vjust = 0.5), size = 3) +
+  scale_fill_brewer(palette = "Greens") +
+  labs(title = '정규 비정규 직원 구성비(20)', x = '연도', y = '백분률', fill = '교원 직위', subtitle = '정규직원 : 정규직 비정규직원 : 공무직·무기계약직') +
+  scale_y_continuous(label = scales::percent_format(accuracy = 1)) + 
+  facet_wrap(~ kind) +
+  theme_classic() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom', 
+        axis.text.x=element_text(angle=90, hjust=1, vjust = 0)) + 
+  geom_hline(yintercept = 0.268, color = 'red') +
+  ggsave("정규 비정규 구성비.jpg", dpi = 300) 
+
+###############    정규직원 대비 비정규직원
+data %>% 
+  filter(!(estkind == '사립' && kind == '유치원')) %>%
+  group_by(year) %>% 
+  summarise(정규직원 = sum(staff.regular),
+            비정규직원 = sum(staff.temporal)) %>% 
+  gather(div, value, 2:3) %>%
+  ggplot(aes(x = year, y = value)) + 
+  geom_line(aes(group = div, color = div)) +
+  geom_point() +
+  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(value)), size = 4) +
+#  scale_fill_brewer(palette = "Greens") +
+  labs(title = '정규 비정규 직원수', x = '연도', y = '직원수', color = '교원 직위', subtitle = '정규직원 : 정규직/(사립유)일반직 비정규직원 : 공무직·무기계약직/(사립유)기타직') +
+  scale_y_continuous(label = scales::number_format(accuracy = 1, big.mark = ',')) + 
+  #  facet_grid(province ~ estkind) +
+  scale_color_brewer(type = 'div', palette = 'Set1') +
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom') + 
+  ggsave("정규 비정규 직원수.jpg", dpi = 300) 
+
+
+
+
+###############    정규직원 대비 비정규직원(학교급)
+data %>% 
+  group_by(year, kind) %>% 
+  filter(!(estkind == '사립' && kind == '유치원')) %>%
+  summarise(정규직원 = sum(staff.regular),
+                비정규직원 = sum(staff.temporal)) %>% 
+  gather(div, value, 3:4) %>%
+  ggplot(aes(x = year, y = value)) + 
+  geom_line(aes(group = div, color = div)) +
+  geom_point() +
+  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(value)), size = 4) +
+  #  scale_fill_brewer(palette = "Greens") +
+  labs(title = '정규 비정규 직원수', x = '연도', y = '직원수', color = '교원 직위', subtitle = '정규직원 : 정규직/(사립유)일반직 비정규직원 : 공무직·무기계약직/(사립유)기타직') +
+  scale_y_continuous(label = scales::number_format(accuracy = 1, big.mark = ',')) + 
+  #  facet_grid(province ~ estkind) +
+  scale_color_brewer(type = 'div', palette = 'Set1') +
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12), 
+        legend.position = 'bottom') + 
+  facet_grid(~kind) + 
+  ggsave("정규 비정규 직원수(학교급).jpg", dpi = 300) 
+
+
+###############    정규직원 대비 비정규직원(지역급)
+data %>% 
+  group_by(year, province) %>% 
+  filter(!(estkind == '사립' && kind == '유치원')) %>%
+  summarise(정규직원 = sum(staff.regular),
+            비정규직원 = sum(staff.temporal)) %>% 
+  gather(div, value, 3:4) %>%
+  ggplot(aes(x = year, y = value)) + 
+  geom_line(aes(group = div, color = div)) +
+  geom_point() +
+  geom_text_repel(aes(label = scales::number_format(big.mark = ',', accuracy = 1)(value)), size = 2) +
+  #  scale_fill_brewer(palette = "Greens") +
+  labs(title = '정규 비정규 직원수', x = '연도', y = '직원수', color = '교원 직위', subtitle = '정규직원 : 정규직/(사립유)일반직 비정규직원 : 공무직·무기계약직/(사립유)기타직') +
+  scale_y_continuous(label = scales::number_format(accuracy = 1, big.mark = ',')) + 
+  #  facet_grid(province ~ estkind) +
+  scale_color_brewer(type = 'div', palette = 'Set1') +
+  theme_bw() +
+  theme(plot.title=element_text(size=20, color="blue"), 
+        legend.text=element_text(size=12)) + 
+  facet_wrap(~ province) + 
+  ggsave("정규 비정규 직원수(지역규모).jpg", dpi = 300) 
