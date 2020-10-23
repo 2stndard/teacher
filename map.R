@@ -48,10 +48,9 @@ shapes.t %>%
   add_polygons(line = list(width = 1, color = toRGB('red'))) %>%
   layout(xaxis = list(scaleanchor = 'y', showgrid = F, showticklabels = F, title = NA),
          yaxis = list(showgrid = F, showticklabels = F, title = NA)
-  )
+        )
 
-shapes.t %>%  
-  filter(group %in% c('0.1')) %>% filter(region == '29')
+lapply(shapes, View)
 
 
 dir <- ('D:/R/data/map/location/')
@@ -72,6 +71,8 @@ d <- data %>% filter(is.na(V17) == F, is.na(V18) == F, grepl('대학교', V12), 
 
 dim(d)
 dim(data)
+
+
 
 shapes.t %>%  
   filter(group %in% c('0.1'))  %>% #filter(region == '46') %>%
